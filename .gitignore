@@ -1,0 +1,23 @@
+# Python build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.spec.bak
+build/
+*.egg-info/
+
+# Logs and databases
+*.log
+projects.db-shm
+projects.db-wal
+
+# OS and Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment variables
+.env
