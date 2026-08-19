@@ -5,6 +5,7 @@ import { colorOf, txtOn } from '../../utils/color.js';
 import { cardFields, savePrefs } from '../../core/prefs.js';
 import { statFor, pri, emp, stg, prj } from '../../services/refs.js';
 import { matchSearch } from '../table/filters.js';
+import { getColDefs } from '../table/colDefs.js';
 import { openCardSettings } from '../kanban/KanbanView.js';
 import { popover, closePop } from '../../ui/popover.js';
 import { getViewFilters, matchViewFilters, countActiveViewFilters, resetViewFilters, openViewFiltersPopover } from '../../ui/viewFilters.js';
