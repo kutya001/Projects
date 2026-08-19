@@ -130,7 +130,7 @@ export function getColDefs(S) {
     ],
     stageHistory: [
       col('ts', 'Дата и время', 'datetime', { w: 160 }),
-      col('projectId', 'Проект', 'select', { dir: () => S.projects, w: 220 }),
+      col('projectId', 'Проект', 'select', { dir: () => S.projects, w: 260 }),
       col('stageId', 'Этап', 'select', { dir: () => S.stages, w: 160 }),
       col('from', 'Было %', 'number', { w: 85 }),
       col('to', 'Стало %', 'number', { w: 85 }),

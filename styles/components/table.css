@@ -129,8 +129,9 @@ table.tbl {
 .tbl td {
   padding: 8px 10px;
   border-bottom: 1px solid var(--line2);
-  vertical-align: top;
+  vertical-align: middle;
   font-size: 13px;
+  max-width: 0;
 }
 
 .tbl tbody tr.rw {
@@ -185,7 +186,20 @@ table.tbl {
   font-size: 11.5px;
   font-weight: 600;
   border: 1px solid;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.chip .chip-txt {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: middle;
 }
 
 .chip i {

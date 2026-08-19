@@ -170,7 +170,7 @@ export function dirItem(colDef, id) {
 }
 
 export function chipHtml(name, color) {
-  return `<span class="chip" style="background:${tint(color, .13)};border-color:${tint(color, .45)};color:${txtOn('#f8f8f8') === '#1B2430' ? shade(color) : '#333'}"><i style="background:${color}"></i>${esc(name)}</span>`;
+  return `<span class="chip" title="${esc(name)}" style="background:${tint(color, .13)};border-color:${tint(color, .45)};color:${txtOn('#f8f8f8') === '#1B2430' ? shade(color) : '#333'}"><i style="background:${color}"></i><span class="chip-txt">${esc(name)}</span></span>`;
 }
 
 export function stageMiniBarsHtml(S, r) {

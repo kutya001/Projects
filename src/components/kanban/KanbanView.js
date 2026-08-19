@@ -868,6 +868,23 @@ export function renderKanbanView(S, ent, mount, callbacks = {}) {
     };
   });
 
+  const updateColumnBadges = () => {
+    mount.querySelectorAll('.kb-col').forEach(col => {
+      const body = col.querySelector('.kb-body');
+      const badge = col.querySelector('.kb-h .n');
+      if (body && badge) {
+        const cards = body.querySelectorAll('.kcard');
+        badge.textContent = cards.length;
+        const emptyEl = body.querySelector('.kempty');
+        if (cards.length === 0 && !emptyEl) {
+          body.innerHTML = '<div class="kempty">пусто</div>';
+        } else if (cards.length > 0 && emptyEl) {
+          emptyEl.remove();
+        }
+      }
+    });
+  };
+
   // Cards interaction & Drag/Drop
   mount.querySelectorAll('.kcard').forEach(c => {
     const id = +c.dataset.id;
@@ -909,12 +926,16 @@ export function renderKanbanView(S, ent, mount, callbacks = {}) {
         c.classList.remove('over-card-top', 'over-card-bottom');
 
         const draggedId = +e.dataTransfer.getData('text/kid');
+        const fromColGid = e.dataTransfer.getData('text/fromcolgid');
         const targetId = +c.dataset.id;
         const targetColGid = c.dataset.colgid;
         if (!draggedId || draggedId === targetId) return;
 
         const draggedItem = S[ent].find(x => x.id === draggedId);
         if (!draggedItem) return;
+
+        const oldStageId = ent === 'projects' ? draggedItem.stageId : null;
+        const oldProgress = ent === 'projects' ? (draggedItem.stageProgress || {}) : {};
 
         if (activeCustomBoard) {
           const targetColDef = groups.find(grp => String(grp.id) === targetColGid);
@@ -923,15 +944,11 @@ export function renderKanbanView(S, ent, mount, callbacks = {}) {
             if (typeof nVal === 'string' && !isNaN(+nVal)) nVal = +nVal;
             draggedItem[targetColDef.field] = nVal;
             draggedItem.updatedAt = nowIso();
-            try { await db[ent].put(draggedItem); } catch (err) { console.error('Error updating item', err); }
           }
         } else {
           const targetGidVal = targetColGid !== '__null' ? +targetColGid : null;
-          if ((draggedItem[by] ?? null) !== targetGidVal) {
-            draggedItem[by] = targetGidVal;
-            draggedItem.updatedAt = nowIso();
-            try { await db[ent].put(draggedItem); } catch (err) { console.error('Error updating item group', err); }
-          }
+          draggedItem[by] = targetGidVal;
+          draggedItem.updatedAt = nowIso();
         }
 
         // Reorder cards in target column
@@ -955,12 +972,43 @@ export function renderKanbanView(S, ent, mount, callbacks = {}) {
           colCards.push(draggedId);
         }
 
+        if (fromColGid && fromColGid !== targetColGid) {
+          const fromColKey = `${ent}_${by}_${fromColGid}`;
+          if (S.prefs.kanbanCardOrder[fromColKey]) {
+            S.prefs.kanbanCardOrder[fromColKey] = S.prefs.kanbanCardOrder[fromColKey].filter(x => x !== draggedId);
+          }
+        }
+
         S.prefs.kanbanCardOrder[targetColKey] = colCards;
-        await savePrefs(S);
-        await refreshAll(S);
-        await afterChange(S);
+
+        // Smooth DOM mutation without destroying the board
+        const draggedCardEl = mount.querySelector(`.kcard[data-id="${draggedId}"]`);
+        if (draggedCardEl) {
+          draggedCardEl.dataset.colgid = targetColGid;
+          if (e.clientY < midY) {
+            c.parentNode.insertBefore(draggedCardEl, c);
+          } else {
+            c.parentNode.insertBefore(draggedCardEl, c.nextSibling);
+          }
+          draggedCardEl.classList.add('just-moved');
+          setTimeout(() => draggedCardEl.classList.remove('just-moved'), 700);
+          updateColumnBadges();
+        }
+
+        // Persist in background
+        savePrefs(S);
+        db[ent].put(draggedItem).catch(err => console.error('Error updating item', err));
+        if (ent === 'projects' && draggedItem.stageId && draggedItem.stageId !== oldStageId) {
+          db.stageHistory.add({
+            projectId: draggedItem.id,
+            ts: nowIso(),
+            stageId: draggedItem.stageId,
+            from: oldProgress[oldStageId] || 0,
+            to: (draggedItem.stageProgress && draggedItem.stageProgress[draggedItem.stageId]) || 0
+          }).catch(err => console.error('Error saving stage history', err));
+        }
+        afterChange(S);
         toast('Порядок карточек обновлен', 'ok');
-        reRender();
       }
     });
 
@@ -1023,6 +1071,7 @@ export function renderKanbanView(S, ent, mount, callbacks = {}) {
 
     colEl.addEventListener('drop', async e => {
       e.preventDefault();
+      e.stopPropagation();
       colEl.classList.remove('over-col');
       colEl.classList.remove('over');
 
@@ -1050,6 +1099,7 @@ export function renderKanbanView(S, ent, mount, callbacks = {}) {
       if (!id) return;
       const r = S[ent].find(x => x.id === id);
       if (!r) return;
+      const fromGid = e.dataTransfer.getData('text/fromcolgid');
       const targetGid = colEl.dataset.gid;
 
       const oldStageId = ent === 'projects' ? r.stageId : null;
@@ -1074,29 +1124,43 @@ export function renderKanbanView(S, ent, mount, callbacks = {}) {
       colCards.push(id);
       S.prefs.kanbanCardOrder[targetColKey] = colCards;
 
-      try {
-        await db[ent].put(r);
-
-        // Record stage history if project stage changed
-        if (ent === 'projects' && r.stageId && r.stageId !== oldStageId) {
-          await db.stageHistory.add({
-            projectId: r.id,
-            ts: nowIso(),
-            stageId: r.stageId,
-            from: oldProgress[oldStageId] || 0,
-            to: (r.stageProgress && r.stageProgress[r.stageId]) || 0
-          });
+      if (fromGid && fromGid !== targetGid) {
+        const fromColKey = `${ent}_${by}_${fromGid}`;
+        if (S.prefs.kanbanCardOrder[fromColKey]) {
+          S.prefs.kanbanCardOrder[fromColKey] = S.prefs.kanbanCardOrder[fromColKey].filter(x => x !== id);
         }
-
-        await savePrefs(S);
-        await refreshAll(S);
-        await afterChange(S);
-        toast(`«${r.name}» перемещен(а)`, 'ok');
-        reRender();
-      } catch (err) {
-        setDbBeacon('error', '🔴 Ошибка базы данных');
-        toast('Ошибка записи: ' + err.message, 'err');
       }
+
+      // Smooth DOM update: move the card into target column's kb-body
+      const targetBody = colEl.querySelector('.kb-body');
+      const draggedCardEl = mount.querySelector(`.kcard[data-id="${id}"]`);
+      if (targetBody && draggedCardEl) {
+        const emptyEl = targetBody.querySelector('.kempty');
+        if (emptyEl) emptyEl.remove();
+
+        draggedCardEl.dataset.colgid = targetGid;
+        targetBody.appendChild(draggedCardEl);
+        draggedCardEl.classList.add('just-moved');
+        setTimeout(() => draggedCardEl.classList.remove('just-moved'), 700);
+
+        updateColumnBadges();
+      }
+
+      savePrefs(S);
+      db[ent].put(r).catch(err => console.error('Error saving item', err));
+
+      if (ent === 'projects' && r.stageId && r.stageId !== oldStageId) {
+        db.stageHistory.add({
+          projectId: r.id,
+          ts: nowIso(),
+          stageId: r.stageId,
+          from: oldProgress[oldStageId] || 0,
+          to: (r.stageProgress && r.stageProgress[r.stageId]) || 0
+        }).catch(err => console.error('Error recording stage history', err));
+      }
+
+      afterChange(S);
+      toast(`«${r.name}» перемещен(а)`, 'ok');
     });
   });
 }
