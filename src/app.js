@@ -133,6 +133,11 @@ export async function initApp() {
     const p = router.getRoute();
     S.page = p;
 
+    // Capture active search input selection state to prevent losing focus during keystrokes
+    const activeSearch = document.activeElement && document.activeElement.id === 'topSearch'
+      ? { start: document.activeElement.selectionStart, end: document.activeElement.selectionEnd }
+      : null;
+
     // Update active nav button
     document.querySelectorAll('nav .nv').forEach(btn => {
       btn.classList.toggle('on', btn.dataset.page === p);
@@ -148,6 +153,17 @@ export async function initApp() {
     else if (p === 'dbInspector') renderDbInspectorPage(S, pageMount, callbacks);
     else if (p === 'settings') renderSettingsPage(S, pageMount, callbacks);
     else renderProjectsPage(S, pageMount, callbacks);
+
+    // Restore search input focus and cursor position smoothly
+    if (activeSearch) {
+      const newSearch = pageMount.querySelector('#topSearch');
+      if (newSearch) {
+        newSearch.focus();
+        try {
+          newSearch.setSelectionRange(activeSearch.start, activeSearch.end);
+        } catch (_) {}
+      }
+    }
   }
 
   // Sidebar Collapse logic

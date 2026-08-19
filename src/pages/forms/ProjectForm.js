@@ -208,8 +208,24 @@ export function openProjectForm(S, id, presetOrOnSave, onSaveCb) {
           }
         } else {
           await db.projects.put(p);
-          // Check for stage changes and individual stage progress changes
-          if (p.stageId !== oldStageId) {
+          // Check for individual stage progress changes across all stages
+          let stageChangeLogged = false;
+          for (const st of (S.stages || [])) {
+            const oldVal = oldProgress[st.id] !== undefined ? oldProgress[st.id] : 0;
+            const newVal = p.stageProgress[st.id] !== undefined ? p.stageProgress[st.id] : 0;
+            if (oldVal !== newVal) {
+              await db.stageHistory.add({
+                projectId: p.id,
+                ts: nowIso(),
+                stageId: st.id,
+                from: oldVal,
+                to: newVal
+              });
+              if (st.id === p.stageId) stageChangeLogged = true;
+            }
+          }
+          // If the active stage changed but had no progress delta, log stage transition
+          if (p.stageId && p.stageId !== oldStageId && !stageChangeLogged) {
             const fromProg = oldProgress[oldStageId] || 0;
             const toProg = p.stageProgress[p.stageId] || 0;
             await db.stageHistory.add({
@@ -219,20 +235,6 @@ export function openProjectForm(S, id, presetOrOnSave, onSaveCb) {
               from: fromProg,
               to: toProg
             });
-          } else {
-            for (const st of (S.stages || [])) {
-              const oldVal = oldProgress[st.id] || 0;
-              const newVal = p.stageProgress[st.id] || 0;
-              if (oldVal !== newVal) {
-                await db.stageHistory.add({
-                  projectId: p.id,
-                  ts: nowIso(),
-                  stageId: st.id,
-                  from: oldVal,
-                  to: newVal
-                });
-              }
-            }
           }
         }
 

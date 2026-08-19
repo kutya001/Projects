@@ -586,6 +586,40 @@ nav .nv.on .cnt {
     flex-wrap: wrap;
   }
 
+  .unified-topbar {
+    padding: 8px 10px;
+    gap: 8px;
+    justify-content: space-between;
+  }
+
+  .ut-left {
+    flex: 1 1 auto;
+    gap: 6px;
+  }
+
+  .ut-title {
+    font-size: 14px;
+  }
+
+  .ut-spacer {
+    display: none;
+  }
+
+  .ut-search {
+    order: 10;
+    width: 100%;
+    max-width: none;
+    flex: 1 1 100%;
+    margin-left: 0;
+    margin-top: 4px;
+  }
+
+  .ut-right {
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
   .search {
     flex: 1 1 100%;
     order: 2;

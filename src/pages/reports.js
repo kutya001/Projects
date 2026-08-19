@@ -186,7 +186,8 @@ export function renderReportsPage(S, mount, callbacks = {}) {
   };
 
   const renderDonutChart = (data, total) => {
-    if (!total || !data.length) {
+    const nonZero = (data || []).filter(d => d.value > 0);
+    if (!total || total <= 0 || !nonZero.length) {
       return `<div style="color:var(--mut2);text-align:center;padding:24px">Нет данных для диаграммы</div>`;
     }
     const size = 130;
@@ -195,7 +196,7 @@ export function renderReportsPage(S, mount, callbacks = {}) {
     const circ = 2 * Math.PI * radius;
     let offset = 0;
 
-    const slices = data.filter(d => d.value > 0).map(d => {
+    const slices = nonZero.map(d => {
       const sliceLength = (d.value / total) * circ;
       const strokeDasharray = `${sliceLength} ${circ - sliceLength}`;
       const strokeDashoffset = -offset;
@@ -203,7 +204,7 @@ export function renderReportsPage(S, mount, callbacks = {}) {
       return `<circle cx="${size/2}" cy="${size/2}" r="${radius}" fill="none" stroke="${d.color}" stroke-width="${strokeWidth}" stroke-dasharray="${strokeDasharray}" stroke-dashoffset="${strokeDashoffset}"></circle>`;
     }).join('');
 
-    const legendHtml = data.filter(d => d.value > 0).map(d => `
+    const legendHtml = nonZero.map(d => `
       <div class="legend-item">
         <span class="legend-swatch" style="background:${d.color}"></span>
         <span style="flex:1">${esc(d.name)}</span>
