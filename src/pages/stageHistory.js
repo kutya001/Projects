@@ -6,6 +6,7 @@ import { confirmBox } from '../ui/modal.js';
 import { afterChange } from '../utils/logger.js';
 import { renderTableView } from '../components/table/TableView.js';
 import { openViewModal } from './forms/ViewForm.js';
+import { renderUnifiedHeader } from '../ui/unifiedHeader.js';
 
 export function renderStageHistoryPage(S, mount, callbacks = {}) {
   const hist = (S.stageHistory && S.stageHistory.length ? S.stageHistory : (S.history || []));
@@ -24,28 +25,28 @@ export function renderStageHistoryPage(S, mount, callbacks = {}) {
 
   const netDelta = totalPos + totalNeg;
 
+  const headerHtml = renderUnifiedHeader(S, {
+    title: 'Журнал этапов',
+    count: hist.length,
+    actions: `
+      <button class="btn sm" id="btnExportHistCsv" style="display:inline-flex;align-items:center;gap:4px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        Экспорт CSV
+      </button>
+      <button class="btn sm" id="btnExportHistJson" style="display:inline-flex;align-items:center;gap:4px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2zM17 21v-8H7v8M7 3v5h8"/></svg>
+        JSON
+      </button>
+      <button class="btn sm dgr" id="btnClearStageHist" style="display:inline-flex;align-items:center;gap:4px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        Очистить
+      </button>
+    `
+  });
+
   mount.innerHTML = `
-    <div class="phead">
-      <div>
-        <div class="kick">Аналитика и аудит прогресса</div>
-        <h1>Журнал изменения этапов</h1>
-      </div>
-      <div class="sp"></div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <button class="btn sm" id="btnExportHistCsv" style="display:inline-flex;align-items:center;gap:4px">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-          Экспорт CSV
-        </button>
-        <button class="btn sm" id="btnExportHistJson" style="display:inline-flex;align-items:center;gap:4px">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2zM17 21v-8H7v8M7 3v5h8"/></svg>
-          Экспорт JSON
-        </button>
-        <button class="btn sm dgr" id="btnClearStageHist" style="display:inline-flex;align-items:center;gap:4px">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-          Очистить журнал
-        </button>
-      </div>
-    </div>
+    ${headerHtml}
+    <div class="page-content">
 
     <!-- Summary KPI Cards -->
     <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:12px;margin-bottom:16px">

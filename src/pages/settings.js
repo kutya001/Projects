@@ -9,6 +9,8 @@ import { savePrefs } from '../core/prefs.js';
 import { fmtDT } from '../utils/date.js';
 import { esc } from '../utils/dom.js';
 
+import { renderUnifiedHeader } from '../ui/unifiedHeader.js';
+
 let auditLogFilters = {
   search: '',
   action: '',
@@ -18,25 +20,15 @@ let auditLogFilters = {
 export function renderSettingsPage(S, mount, callbacks = {}) {
   const mods = S.prefs.modules || { projects: true, tasks: false, changes: false };
 
-  // Calculate backup beacon status for Settings page
-  let bkClass = 'ok';
-  let bkText = '🟢 Резервная копия актуальна';
-  if (!S.lastExport) {
-    bkClass = 'err';
-    bkText = '🔴 Резервная копия не создавалась';
-  } else {
-    const diffHours = (Date.now() - new Date(S.lastExport).getTime()) / (1000 * 60 * 60);
-    if (diffHours > 24) {
-      bkClass = 'warn';
-      bkText = '🟡 Резервная копия старше суток';
-    }
-  }
+  const headerHtml = renderUnifiedHeader(S, {
+    title: 'Настройки',
+    count: null
+  });
 
   mount.innerHTML = `
-    <div class="phead">
-      <div><div class="kick">Конфигурация системы</div><h1>Настройки</h1></div>
-    </div>
-    <div class="setgrid" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:16px">
+    ${headerHtml}
+    <div class="page-content" style="padding-top:10px">
+      <div class="setgrid" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:16px">
 
       <!-- Author and Platform Info Card -->
       <div class="setcard" style="border-left: 4px solid #805AD5">

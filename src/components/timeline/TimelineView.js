@@ -5,9 +5,9 @@ import { colorOf, txtOn } from '../../utils/color.js';
 import { cardFields, savePrefs } from '../../core/prefs.js';
 import { statFor, pri, emp, stg, prj } from '../../services/refs.js';
 import { matchSearch } from '../table/filters.js';
-import { getColDefs } from '../table/colDefs.js';
 import { openCardSettings } from '../kanban/KanbanView.js';
 import { popover, closePop } from '../../ui/popover.js';
+import { getViewFilters, matchViewFilters, countActiveViewFilters, resetViewFilters, openViewFiltersPopover } from '../../ui/viewFilters.js';
 import { setupTimelineDragDrop } from './dragDrop.js';
 import { showContextMenu } from '../../ui/contextMenu.js';
 import { getCommonContextMenuItems } from '../../services/quickActions.js';
@@ -88,8 +88,8 @@ function calcFullTimelineWindow(S, ent, mode, anchor, coldefs) {
 
 function tlGroupDefs(S, ent, by) {
   const unb = { id: null, name: 'Не назначено', color: '#98A2B3' };
-  if (by === 'dev') return [...S.employees.filter(e => e.role === 'dev'), unb];
-  if (by === 'agent') return [...S.employees.filter(e => e.role === 'agent'), unb];
+  if (by === 'dev') return [...S.employees.filter(e => e.role === 'dev' && e.active !== false && e.active !== 0), unb];
+  if (by === 'agent') return [...S.employees.filter(e => e.role === 'agent' && e.active !== false && e.active !== 0), unb];
   if (by === 'priority') return [...S.priorities, unb];
   if (by === 'stage') return [...S.stages, unb];
   return [...(ent === 'projects' ? S.projectStatuses : S.taskStatuses), unb];
@@ -210,11 +210,12 @@ export function renderTimelineView(S, ent, mount, callbacks = {}) {
   }
 
   const cf = cardFields(S, ent, 'tl');
+  const tlFilters = getViewFilters(S, ent, 'tl');
   let rowsHtml = '', rowMeta = [];
   const wsT = ws.getTime();
 
   gdefs.forEach((g, gi) => {
-    const rawItems = S[ent].filter(r => g.match(r) && matchSearch(S, coldefs, ent, r));
+    const rawItems = S[ent].filter(r => g.match(r) && matchSearch(S, coldefs, ent, r) && matchViewFilters(S, ent, r, tlFilters));
     const gidStr = String(g.id ?? '__null');
     const itemOrderKey = `${ent}_${groupBy}_${gidStr}`;
     S.prefs.tlItemOrder = S.prefs.tlItemOrder || {};
@@ -404,57 +405,53 @@ export function renderTimelineView(S, ent, mount, callbacks = {}) {
 
   const todayX = Math.round(diffDays(toISO(ws), today) * ppd);
   mount.innerHTML = `
-   <div class="tl-tools">
-     <div class="seg" id="tlMode">${MODES.map(m => `<button data-m="${m[0]}" class="${m[0] === mode ? 'on' : ''}">${m[1]}</button>`).join('')}</div>
-     <div class="seg" id="tlGroup">
-       <button data-g="dev" class="${groupBy === 'dev' ? 'on' : ''}">По разработчикам</button>
-       <button data-g="agent" class="${groupBy === 'agent' ? 'on' : ''}">По агентам</button>
-       <button data-g="status" class="${groupBy === 'status' ? 'on' : ''}">По статусу</button>
-       <button data-g="priority" class="${groupBy === 'priority' ? 'on' : ''}">По приоритету</button>
-       ${ent === 'projects' ? `<button data-g="stage" class="${groupBy === 'stage' ? 'on' : ''}">По этапу</button>` : ''}
-     </div>
-     <select id="tlColor" style="width:auto;padding:7px 10px">
-       <option value="status" ${colorBy === 'status' ? 'selected' : ''}>Цвет: Статус</option>
-       <option value="priority" ${colorBy === 'priority' ? 'selected' : ''}>Цвет: Приоритет</option>
-       <option value="dev" ${colorBy === 'dev' ? 'selected' : ''}>Цвет: Разработчик</option>
-       <option value="agent" ${colorBy === 'agent' ? 'selected' : ''}>Цвет: Агент</option>
-       ${ent === 'projects' ? `<option value="stage" ${colorBy === 'stage' ? 'selected' : ''}>Цвет: Этап</option>` : ''}
-     </select>
+    <div class="panel toolbar" style="margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--mut);font-weight:700;letter-spacing:.06em;text-transform:uppercase">Масштаб:</span>
+      <div class="seg" id="tlMode">
+        ${MODES.map(m => `<button data-m="${m[0]}" class="${mode === m[0] ? 'on' : ''}">${m[1]}</button>`).join('')}
+      </div>
+      <div class="seg" id="tlGroup">
+        <button data-g="status" class="${groupBy === 'status' ? 'on' : ''}">По статусам</button>
+        ${ent === 'projects' ? `<button data-g="stage" class="${groupBy === 'stage' ? 'on' : ''}">По этапам</button>` : ''}
+        <button data-g="dev" class="${groupBy === 'dev' ? 'on' : ''}">По разработчикам</button>
+        <button data-g="agent" class="${groupBy === 'agent' ? 'on' : ''}">По агентам</button>
+        <button data-g="priority" class="${groupBy === 'priority' ? 'on' : ''}">По приоритетам</button>
+      </div>
+      <select id="tlColor" style="width:auto;padding:7px 10px">
+        <option value="status" ${colorBy === 'status' ? 'selected' : ''}>Цвет: Статус</option>
+        <option value="priority" ${colorBy === 'priority' ? 'selected' : ''}>Цвет: Приоритет</option>
+        <option value="dev" ${colorBy === 'dev' ? 'selected' : ''}>Цвет: Разработчик</option>
+        <option value="agent" ${colorBy === 'agent' ? 'selected' : ''}>Цвет: Агент</option>
+        ${ent === 'projects' ? `<option value="stage" ${colorBy === 'stage' ? 'selected' : ''}>Цвет: Этап</option>` : ''}
+      </select>
       <button class="btn sm" data-nav="-1">◀</button>
       <button class="btn sm" data-today>Сегодня</button>
       <button class="btn sm" data-nav="1">▶</button>
       <button class="btn sm" data-cards>⚙ Карточки</button>
-      ${S.search && S.search.trim() ? `
-        <button class="btn sm" id="btnTlClearSearch" title="Сбросить строку поиска" style="display:inline-flex;align-items:center;gap:6px;background:#FFF5F5;border-color:#FEB2B2;color:#C53030;font-weight:700;padding:3px 10px;border-radius:6px;cursor:pointer">
-          <svg viewBox="0 0 24 24" fill="currentColor" style="width:12px;height:12px"><path d="M3 5h18l-7 8v5l-4 2v-7L3 5z"/></svg>
-          Применено фильтров: 1
-          <span style="font-weight:800;margin-left:2px;font-size:12px">✕ Сбросить</span>
-        </button>
-      ` : ''}
+      ${filterBtnHtml}
+      ${resetBtnHtml}
       <span class="hint">Перетаскивайте полосы по дате и между строками · за края — растянуть · клик — карточка</span>
     </div>
-   <div class="tl-scroll" id="tlScrollEl">
-     <div style="min-width:${LEFTW + totalW}px;position:relative">
-       <div class="tl-headrow">
-         <div class="tl-corner" style="width:${LEFTW}px;min-width:${LEFTW}px;flex:none">${groupBy === 'dev' ? 'Разработчик (гл.)' : groupBy === 'agent' ? 'Агент (гл.)' : groupBy === 'priority' ? 'Приоритет' : groupBy === 'stage' ? 'Этап' : 'Статус'}</div>
-         <div class="tl-hc" style="width:${totalW}px;flex:none">${segRow(topSegs)}${segRow(botSegs, true)}</div>
-       </div>
-       <div id="tlBody" style="position:relative">${rowsHtml}
-         ${todayX >= 0 && todayX <= totalW ? `<div class="tl-today" style="left:${LEFTW + todayX}px"></div>` : ''}
-       </div>
-     </div>
-   </div>`;
+    <div class="tl-scroll" id="tlScrollEl">
+      <div style="min-width:${LEFTW + totalW}px;position:relative">
+        <div class="tl-headrow">
+          <div class="tl-corner" style="width:${LEFTW}px;min-width:${LEFTW}px;flex:none">${groupBy === 'dev' ? 'Разработчик (гл.)' : groupBy === 'agent' ? 'Агент (гл.)' : groupBy === 'priority' ? 'Приоритет' : groupBy === 'stage' ? 'Этап' : 'Статус'}</div>
+          <div class="tl-hc" style="width:${totalW}px;flex:none">${segRow(topSegs)}${segRow(botSegs, true)}</div>
+        </div>
+        <div id="tlBody" style="position:relative">${rowsHtml}
+          ${todayX >= 0 && todayX <= totalW ? `<div class="tl-today" style="left:${LEFTW + todayX}px"></div>` : ''}
+        </div>
+      </div>
+    </div>`;
 
   const reRender = () => renderTimelineView(S, ent, mount, callbacks);
 
-  // Auto-scroll or restore scroll position
+  // Restore scroll position strictly from cache without auto-jump to today
   const scrollEl = mount.querySelector('#tlScrollEl');
   if (scrollEl) {
     if (prevLeft !== null) {
       scrollEl.scrollLeft = prevLeft;
       scrollEl.scrollTop = prevTop;
-    } else if (todayX > 0 && todayX < totalW) {
-      scrollEl.scrollLeft = Math.max(0, todayX - 200);
     }
     scrollEl.addEventListener('scroll', () => {
       TL_SCROLL_POS[ent] = { left: scrollEl.scrollLeft, top: scrollEl.scrollTop };
@@ -484,12 +481,18 @@ export function renderTimelineView(S, ent, mount, callbacks = {}) {
     reRender();
   };
 
-  const btnTlClearSearch = mount.querySelector('#btnTlClearSearch');
-  if (btnTlClearSearch) {
-    btnTlClearSearch.onclick = () => {
-      S.search = '';
-      const topSearch = document.querySelector('#topSearch');
-      if (topSearch) topSearch.value = '';
+  const btnTlFilters = mount.querySelector('#btnTlFilters');
+  if (btnTlFilters) {
+    btnTlFilters.onclick = (e) => {
+      e.stopPropagation();
+      openViewFiltersPopover(btnTlFilters, S, ent, 'tl', reRender);
+    };
+  }
+
+  const btnTlResetFilters = mount.querySelector('#btnTlResetFilters');
+  if (btnTlResetFilters) {
+    btnTlResetFilters.onclick = async () => {
+      await resetViewFilters(S, ent, 'tl');
       reRender();
     };
   }
@@ -497,7 +500,10 @@ export function renderTimelineView(S, ent, mount, callbacks = {}) {
   mount.querySelector('[data-cards]').onclick = () => openCardSettings(S, 'tl', reRender);
   mount.querySelector('[data-today]').onclick = () => {
     TL_ANCHOR[ent] = today;
-    TL_SCROLL_POS[ent] = null;
+    if (scrollEl && todayX > 0 && todayX < totalW) {
+      scrollEl.scrollLeft = Math.max(0, todayX - 200);
+      TL_SCROLL_POS[ent] = { left: scrollEl.scrollLeft, top: scrollEl.scrollTop };
+    }
     reRender();
   };
 

@@ -1065,13 +1065,13 @@ async def handle_db_schema(request):
 async def handle_sql_execute(request):
     """POST /api/sql/execute — Execute arbitrary raw SQL query for DB Inspector."""
     data = await request.json()
-    sql = (data.get('sql') or '').strip()
+    sql = (data.get('sql') or data.get('query') or '').strip()
     client_id = request.headers.get('X-Client-ID')
     ip = get_client_ip(request)
     ua = request.headers.get("User-Agent", "")
 
     if not sql:
-        raise web.HTTPBadRequest(text="Missing 'sql' in request body")
+        return web.json_response({"success": False, "error": "Пустой SQL запрос"}, status=400)
 
     db = await get_db()
     try:

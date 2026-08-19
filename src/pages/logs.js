@@ -59,28 +59,26 @@ export function navigateToLogTarget(S, entity, targetStr, logItem = {}, callback
   }
 }
 
+import { renderUnifiedHeader } from '../ui/unifiedHeader.js';
+
 export function renderLogsPage(S, mount, callbacks = {}) {
   const ent = 'auditLogs';
   const logsCount = (S.auditLogs || []).length;
 
+  const headerHtml = renderUnifiedHeader(S, {
+    title: 'Журнал действий',
+    count: logsCount,
+    actions: `
+      <button class="btn sm" id="btnExportLogsJson" title="Экспорт журнала в JSON">JSON</button>
+      <button class="btn sm" id="btnExportLogsCsv" title="Экспорт журнала в CSV">CSV</button>
+      <button class="btn sm" id="btnRefreshLogsPage" title="Обновить журнал">Обновить</button>
+      <button class="btn sm dgr" id="btnClearLogsPage" style="background:#FFF5F5;border-color:#FEB2B2;color:#C53030" title="Очистить весь журнал действий">Очистить</button>
+    `
+  });
+
   mount.innerHTML = `
-    <div class="phead">
-      <div>
-        <div class="kick">Аудит безопасности и подключений</div>
-        <h1 style="display:flex;align-items:center;gap:10px">
-          📋 Журнал действий
-        </h1>
-      </div>
-      <span class="big-n" id="logsCountBadge">${logsCount}</span>
-      <div class="sp"></div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <button class="btn sm" id="btnExportLogsJson" title="Экспорт журнала в JSON">📥 Экспорт JSON</button>
-        <button class="btn sm" id="btnExportLogsCsv" title="Экспорт журнала в CSV">📊 Экспорт CSV</button>
-        <button class="btn sm" id="btnRefreshLogsPage" title="Обновить журнал">🔄 Обновить</button>
-        <button class="btn sm dgr" id="btnClearLogsPage" style="background:#FFF5F5;border-color:#FEB2B2;color:#C53030" title="Очистить весь журнал действий">🧹 Очистить журнал</button>
-      </div>
-    </div>
-    <div id="logsContent"></div>`;
+    ${headerHtml}
+    <div id="logsContent" class="page-content"></div>`;
 
   const cnt = mount.querySelector('#logsContent');
   const reRender = () => renderLogsPage(S, mount, callbacks);

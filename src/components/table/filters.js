@@ -83,14 +83,53 @@ export function openColFilter(S, coldefs, ent, st, k, anchor, onRender) {
   const cur = st.filters[k];
   let html = '';
 
+  const currentRows = S[ent] || [];
+
   if (cdef.type === 'select' || cdef.type === 'multi' || cdef.type === 'role' || cdef.type === 'active') {
-    const opts = cdef.dir
-      ? cdef.dir()
-      : (cdef.type === 'multi' ? S.employees.filter(e => e.role === cdef.role && e.active !== false && e.active !== 0) : []);
+    let allOpts = [];
+    if (cdef.type === 'role') {
+      allOpts = [
+        { id: 'dev', name: 'Разработчик' },
+        { id: 'agent', name: 'Агент / ПМ / Аналитик' }
+      ];
+    } else if (cdef.type === 'active') {
+      allOpts = [
+        { id: '1', name: 'Активен' },
+        { id: '0', name: 'Архив / Неактивен' }
+      ];
+    } else if (cdef.dir) {
+      allOpts = cdef.dir() || [];
+    } else if (cdef.type === 'multi') {
+      allOpts = (S.employees || []).filter(e => e.role === cdef.role && e.active !== false && e.active !== 0);
+    }
+
+    // Collect values that actually exist in current table rows
+    const usedValues = new Set();
+    currentRows.forEach(r => {
+      if (cdef.type === 'active') {
+        const actStr = (r.active !== false && r.active !== 0) ? '1' : '0';
+        usedValues.add(actStr);
+      } else if (cdef.type === 'role') {
+        if (r.role) usedValues.add(String(r.role));
+      } else {
+        const raw = r[k];
+        if (Array.isArray(raw)) {
+          raw.forEach(v => { if (v != null) usedValues.add(String(v)); });
+        } else if (raw != null && raw !== '') {
+          usedValues.add(String(raw));
+        }
+      }
+    });
+
+    // Filter to only options present in current rows and sort alphabetically
+    const opts = allOpts
+      .filter(o => usedValues.has(String(o.id)))
+      .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ru', { numeric: true, sensitivity: 'base' }));
+
     const sel = cur && cur.type === 'sel' ? cur.sel : [];
     html = `<div class="pt">Фильтр: ${esc(cdef.label)}</div>
       <div style="max-height:260px;overflow:auto;min-width:210px">
-      ${opts.map(o => `<label class="pi"><input type="checkbox" value="${o.id}" ${sel.includes(o.id) || sel.includes(String(o.id)) || (!isNaN(+o.id) && sel.includes(+o.id)) ? 'checked' : ''}>${o.color ? `<span class="dot" style="background:${colorOf(o)}"></span>` : ''}${esc(o.name)}</label>`).join('') || '<div style="color:var(--mut2);font-size:12px">нет значений</div>'}
+      ${opts.map(o => `<label class="pi"><input type="checkbox" value="${o.id}" ${sel.includes(o.id) || sel.includes(String(o.id)) || (!isNaN(+o.id) && sel.includes(+o.id)) ? 'checked' : ''}>${o.color ? `<span class="dot" style="background:${colorOf(o)}"></span>` : ''}${esc(o.name)}</label>`).join('') || '<div style="color:var(--mut2);font-size:12px;padding:8px 0">Нет значений в таблице</div>'}
       </div>
       <div class="pact"><button class="btn sm" data-ap>Применить</button><button class="btn sm" data-rs>Сбросить</button></div>`;
   } else if (cdef.type === 'percent' || cdef.type === 'number' || cdef.k === 'progress') {
@@ -103,6 +142,7 @@ export function openColFilter(S, coldefs, ent, st, k, anchor, onRender) {
       </div>
       <div class="pact"><button class="btn sm" data-ap>Применить</button><button class="btn sm" data-rs>Сбросить</button></div>`;
   } else if (cdef.type === 'logAction') {
+    const usedActions = new Set(currentRows.map(r => r.action).filter(Boolean));
     const actionList = [
       { id: 'connect', name: '🟢 Вход / Подключение' },
       { id: 'disconnect', name: '⚪ Выход / Отключение' },
@@ -110,15 +150,19 @@ export function openColFilter(S, coldefs, ent, st, k, anchor, onRender) {
       { id: 'update', name: '✏️ Изменение записи' },
       { id: 'delete', name: '🗑️ Удаление записи' },
       { id: 'bulk_insert', name: '📦 Пакетная вставка' },
-      { id: 'clear_table', name: '🧹 Очистка таблицы' }
-    ];
+      { id: 'clear_table', name: '🧹 Очистка таблицы' },
+      { id: 'sql_execute', name: '⚡ Выполнение SQL' }
+    ].filter(o => usedActions.has(o.id))
+     .sort((a, b) => a.name.localeCompare(b.name, 'ru', { numeric: true, sensitivity: 'base' }));
+
     const sel = cur && cur.type === 'sel' ? cur.sel : [];
     html = `<div class="pt">Фильтр: ${esc(cdef.label)}</div>
       <div style="max-height:260px;overflow:auto;min-width:220px">
-      ${actionList.map(o => `<label class="pi"><input type="checkbox" value="${o.id}" ${sel.includes(o.id) ? 'checked' : ''}>${esc(o.name)}</label>`).join('')}
+      ${actionList.map(o => `<label class="pi"><input type="checkbox" value="${o.id}" ${sel.includes(o.id) ? 'checked' : ''}>${esc(o.name)}</label>`).join('') || '<div style="color:var(--mut2);font-size:12px;padding:8px 0">Нет записей</div>'}
       </div>
       <div class="pact"><button class="btn sm" data-ap>Применить</button><button class="btn sm" data-rs>Сбросить</button></div>`;
   } else if (cdef.type === 'logEntity') {
+    const usedEntities = new Set(currentRows.map(r => r.entity).filter(Boolean));
     const entList = [
       { id: 'system', name: 'Система' },
       { id: 'projects', name: 'Проекты' },
@@ -131,12 +175,15 @@ export function openColFilter(S, coldefs, ent, st, k, anchor, onRender) {
       { id: 'taskStatuses', name: 'Статусы задач' },
       { id: 'projectStatuses', name: 'Статусы проектов' },
       { id: 'kanbanBoards', name: 'Канбан доски' },
-      { id: 'formLayouts', name: 'Макеты форм' }
-    ];
+      { id: 'formLayouts', name: 'Макеты форм' },
+      { id: 'db', name: 'База данных' }
+    ].filter(o => usedEntities.has(o.id))
+     .sort((a, b) => a.name.localeCompare(b.name, 'ru', { numeric: true, sensitivity: 'base' }));
+
     const sel = cur && cur.type === 'sel' ? cur.sel : [];
     html = `<div class="pt">Фильтр: ${esc(cdef.label)}</div>
       <div style="max-height:260px;overflow:auto;min-width:200px">
-      ${entList.map(o => `<label class="pi"><input type="checkbox" value="${o.id}" ${sel.includes(o.id) ? 'checked' : ''}>${esc(o.name)}</label>`).join('')}
+      ${entList.map(o => `<label class="pi"><input type="checkbox" value="${o.id}" ${sel.includes(o.id) ? 'checked' : ''}>${esc(o.name)}</label>`).join('') || '<div style="color:var(--mut2);font-size:12px;padding:8px 0">Нет записей</div>'}
       </div>
       <div class="pact"><button class="btn sm" data-ap>Применить</button><button class="btn sm" data-rs>Сбросить</button></div>`;
   } else if (cdef.type === 'date' || cdef.type === 'datetime') {

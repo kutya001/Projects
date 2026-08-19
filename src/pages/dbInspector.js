@@ -5,6 +5,7 @@ import { modal, confirmBox } from '../ui/modal.js';
 import { popover } from '../ui/popover.js';
 import { afterChange } from '../utils/logger.js';
 import { nowIso } from '../utils/date.js';
+import { renderUnifiedHeader } from '../ui/unifiedHeader.js';
 
 let activeTable = 'projects';
 let activeMode = 'table'; // 'table' | 'sql'
@@ -100,28 +101,25 @@ export async function renderDbInspectorPage(S, mount, callbacks = {}) {
   const curTableDesc = TABLE_DESCRIPTIONS[activeTable] || 'Таблица базы данных SQLite';
   const curTableCount = (S[activeTable] || []).length;
 
-  mount.innerHTML = `
-    <div class="phead">
-      <div>
-        <div class="kick">Прямой доступ к базе данных SQLite</div>
-        <h1>Инспектор БД</h1>
+  const headerHtml = renderUnifiedHeader(S, {
+    title: 'Инспектор БД',
+    count: tables.length,
+    actions: `
+      <div class="view-switch" style="display:inline-flex;background:var(--line2);padding:2px;border-radius:8px;gap:2px">
+        <button id="btnModeTable" class="btn sm ${activeMode === 'table' ? 'pri' : 'ghost'}" style="padding:2px 8px;font-size:12px">
+          Таблица
+        </button>
+        <button id="btnModeSql" class="btn sm ${activeMode === 'sql' ? 'pri' : 'ghost'}" style="padding:2px 8px;font-size:12px">
+          SQL Консоль
+        </button>
       </div>
-      <div class="sp"></div>
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <div class="view-switch" style="display:inline-flex;background:var(--line2);padding:3px;border-radius:10px;gap:2px">
-          <button id="btnModeTable" class="btn sm ${activeMode === 'table' ? 'pri' : 'ghost'}" style="display:inline-flex;align-items:center;gap:4px">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M3 3h18v18H3zM3 9h18M3 15h18M9 3v18"/></svg>
-            Таблица
-          </button>
-          <button id="btnModeSql" class="btn sm ${activeMode === 'sql' ? 'pri' : 'ghost'}" style="display:inline-flex;align-items:center;gap:4px">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
-            SQL Консоль
-          </button>
-        </div>
-      </div>
-    </div>
+    `
+  });
 
-    <div class="db-inspector-container" style="display:flex;gap:16px;align-items:flex-start;min-height:calc(100vh - 160px)">
+  mount.innerHTML = `
+    ${headerHtml}
+    <div class="page-content" style="padding-top:10px">
+      <div class="db-inspector-container" style="display:flex;gap:16px;align-items:flex-start;min-height:calc(100vh - 120px)">
       <!-- Sidebar Table List -->
       <div class="db-sidebar" style="width:260px;min-width:260px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;box-shadow:var(--sh)">
         <div style="font-size:11px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;padding:0 4px">
@@ -387,18 +385,28 @@ export async function renderDbInspectorPage(S, mount, callbacks = {}) {
         const res = await fetch('/api/sql/execute', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: sql })
+          body: JSON.stringify({ sql, query: sql })
         });
         const data = await res.json();
-        if (!res.ok || data.error) {
+        if (!res.ok || !data.success || data.error) {
           resWrap.innerHTML = `<div style="background:#FFF5F5;color:#C53030;padding:12px;border-radius:8px;border:1px solid #FEB2B2;font-size:13px"><b class="mono">Ошибка:</b> ${esc(data.error || 'SQL Error')}</div>`;
           return;
         }
 
-        // Render result table
+        if (data.type === 'write') {
+          resWrap.innerHTML = `
+            <div style="background:#F0FFF4;color:#22543D;padding:12px 14px;border-radius:8px;border:1px solid #9AE6B4;font-size:13px">
+              <b>✓ Запрос успешно выполнен.</b> Затронуто строк: <b class="mono">${data.rowsAffected ?? 0}</b>${data.lastInsertId ? ` · ID новой записи: <b class="mono">${data.lastInsertId}</b>` : ''}
+            </div>
+          `;
+          await refreshAll(S);
+          return;
+        }
+
+        // Render result table for SELECT/PRAGMA
         const cols = data.columns || [];
         const rows = data.rows || [];
-        const affected = data.affected_rows != null ? ` · Затронуто строк: <b>${data.affected_rows}</b>` : '';
+        const affected = data.rowsAffected != null ? ` · Затронуто строк: <b>${data.rowsAffected}</b>` : '';
 
         resWrap.innerHTML = `
           <div style="font-size:12px;color:var(--mut);margin-bottom:8px">Найдено строк: <b class="mono" style="color:var(--ink)">${rows.length}</b>${affected}</div>

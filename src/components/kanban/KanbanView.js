@@ -15,6 +15,7 @@ import { toast } from '../../ui/toast.js';
 import { showContextMenu } from '../../ui/contextMenu.js';
 import { getCommonContextMenuItems } from '../../services/quickActions.js';
 import { popover, closePop } from '../../ui/popover.js';
+import { getViewFilters, matchViewFilters, countActiveViewFilters, resetViewFilters, openViewFiltersPopover } from '../../ui/viewFilters.js';
 
 function kbGroups(S, ent, by) {
   const unb = { id: null, name: 'Не назначено', color: '#98A2B3' };
@@ -508,7 +509,8 @@ export function renderKanbanView(S, ent, mount, callbacks = {}) {
   S.prefs.kanbanColSort = S.prefs.kanbanColSort || {};
   S.prefs.kanbanCardOrder = S.prefs.kanbanCardOrder || {};
 
-  let rows = S[ent].filter(r => matchSearch(S, coldefs, ent, r));
+  const kbFilters = getViewFilters(S, ent, 'kb');
+  let rows = S[ent].filter(r => matchSearch(S, coldefs, ent, r) && matchViewFilters(S, ent, r, kbFilters));
   const cf = cardFields(S, ent, 'kb');
 
   const colsHtml = groups.map(g => {
@@ -631,6 +633,22 @@ export function renderKanbanView(S, ent, mount, callbacks = {}) {
 
   const reRender = () => renderKanbanView(S, ent, mount, callbacks);
 
+  const activeFiltersCount = countActiveViewFilters(kbFilters, S.search);
+  const filterBtnHtml = `
+    <button class="btn sm ${activeFiltersCount ? 'pri' : ''}" id="btnKbFilters" title="Фильтрация карточек" style="display:inline-flex;align-items:center;gap:4px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M3 5h18l-7 8v5l-4 2v-7L3 5z"/></svg>
+      Фильтры ${activeFiltersCount ? `(${activeFiltersCount})` : ''}
+    </button>
+  `;
+
+  const resetBtnHtml = activeFiltersCount > 0 ? `
+    <button class="btn sm" id="btnKbResetFilters" title="Сбросить все применённые фильтры и поиск" style="display:inline-flex;align-items:center;gap:6px;background:#FFF5F5;border-color:#FEB2B2;color:#C53030;font-weight:700;padding:3px 10px;border-radius:6px;cursor:pointer">
+      <svg viewBox="0 0 24 24" fill="currentColor" style="width:12px;height:12px"><path d="M3 5h18l-7 8v5l-4 2v-7L3 5z"/></svg>
+      Применено фильтров: ${activeFiltersCount}
+      <span style="font-weight:800;margin-left:2px;font-size:12px">✕ Сбросить</span>
+    </button>
+  ` : '';
+
   mount.innerHTML = `<div class="panel" style="padding:14px;background:transparent;border:none;box-shadow:none">
     <div class="toolbar panel" style="margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <span style="font-size:12px;color:var(--mut);font-weight:700;letter-spacing:.06em;text-transform:uppercase">Группировка:</span>
@@ -650,13 +668,8 @@ export function renderKanbanView(S, ent, mount, callbacks = {}) {
         <button class="btn sm err" id="btnDeleteBoard" title="Удалить доску">🗑</button>
       ` : ''}
 
-      ${S.search && S.search.trim() ? `
-        <button class="btn sm" id="btnKbClearSearch" title="Сбросить строку поиска" style="display:inline-flex;align-items:center;gap:6px;background:#FFF5F5;border-color:#FEB2B2;color:#C53030;font-weight:700;padding:3px 10px;border-radius:6px;cursor:pointer">
-          <svg viewBox="0 0 24 24" fill="currentColor" style="width:12px;height:12px"><path d="M3 5h18l-7 8v5l-4 2v-7L3 5z"/></svg>
-          Применено фильтров: 1
-          <span style="font-weight:800;margin-left:2px;font-size:12px">✕ Сбросить</span>
-        </button>
-      ` : ''}
+      ${filterBtnHtml}
+      ${resetBtnHtml}
 
       <div class="sp"></div>
       <button class="btn sm" data-cards>⚙ Поля карточек</button>
@@ -692,12 +705,18 @@ export function renderKanbanView(S, ent, mount, callbacks = {}) {
 
   mount.querySelector('[data-cards]').onclick = () => openCardSettings(S, 'kb', reRender);
 
-  const btnKbClearSearch = mount.querySelector('#btnKbClearSearch');
-  if (btnKbClearSearch) {
-    btnKbClearSearch.onclick = () => {
-      S.search = '';
-      const topSearch = document.querySelector('#topSearch');
-      if (topSearch) topSearch.value = '';
+  const btnKbFilters = mount.querySelector('#btnKbFilters');
+  if (btnKbFilters) {
+    btnKbFilters.onclick = (e) => {
+      e.stopPropagation();
+      openViewFiltersPopover(btnKbFilters, S, ent, 'kb', reRender);
+    };
+  }
+
+  const btnKbResetFilters = mount.querySelector('#btnKbResetFilters');
+  if (btnKbResetFilters) {
+    btnKbResetFilters.onclick = async () => {
+      await resetViewFilters(S, ent, 'kb');
       reRender();
     };
   }

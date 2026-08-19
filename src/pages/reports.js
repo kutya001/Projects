@@ -10,6 +10,7 @@ import { popover } from '../ui/popover.js';
 import { db, refreshAll } from '../core/db.js';
 import { savePrefs } from '../core/prefs.js';
 import { afterChange } from '../utils/logger.js';
+import { renderUnifiedHeader } from '../ui/unifiedHeader.js';
 
 let filterState = {
   module: 'projects',
@@ -361,27 +362,26 @@ export function renderReportsPage(S, mount, callbacks = {}) {
     <button class="btn sm" id="btnResetFilters">Сбросить фильтры</button>
   `;
 
-  mount.innerHTML = `
-    <div class="phead">
-      <div>
-        <div class="kick">Сквозная аналитика платформы</div>
-        <h1>Отчёты и Дашборды Power BI</h1>
-      </div>
-      <div class="sp"></div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <button class="btn sm ${isEditLayoutMode ? 'pri' : ''}" id="btnToggleEditLayout" style="display:inline-flex;align-items:center;gap:4px">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          ${isEditLayoutMode ? 'Сохранить раскладку' : 'Настроить дашборд'}
-        </button>
-        <button class="btn sm" id="btnExportCsv" title="Экспорт отчёта в CSV" style="display:inline-flex;align-items:center;gap:4px">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-          Экспорт CSV
-        </button>
-        ${resetFiltersBtnHtml}
-      </div>
-    </div>
+  const headerHtml = renderUnifiedHeader(S, {
+    title: 'Отчёты / BI',
+    count: currentData.length,
+    actions: `
+      <button class="btn sm ${isEditLayoutMode ? 'pri' : ''}" id="btnToggleEditLayout" style="display:inline-flex;align-items:center;gap:4px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        ${isEditLayoutMode ? 'Сохранить раскладку' : 'Настроить дашборд'}
+      </button>
+      <button class="btn sm" id="btnExportCsv" title="Экспорт отчёта в CSV" style="display:inline-flex;align-items:center;gap:4px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        Экспорт CSV
+      </button>
+      ${resetFiltersBtnHtml}
+    `
+  });
 
-    <div class="reports-container ${isEditLayoutMode ? 'editing-dashboard' : ''}">
+  mount.innerHTML = `
+    ${headerHtml}
+    <div class="page-content" style="padding-top:10px">
+      <div class="reports-container ${isEditLayoutMode ? 'editing-dashboard' : ''}">
       ${isEditLayoutMode ? `
       <div class="reports-edit-toolbar">
         <div style="font-size:13px;font-weight:700;color:#92400E;display:flex;align-items:center;gap:6px">

@@ -9,6 +9,7 @@ import { toast } from '../ui/toast.js';
 import { renderTableView } from '../components/table/TableView.js';
 import { openQuickChangeModal, getCommonContextMenuItems } from '../services/quickActions.js';
 import { showContextMenu } from '../ui/contextMenu.js';
+import { renderUnifiedHeader } from '../ui/unifiedHeader.js';
 
 let curTab = 'employees';
 let curView = 'table'; // 'table' | 'cards'
@@ -18,28 +19,30 @@ export function renderRefsPage(S, mount, callbacks = {}) {
     <button data-tab="${k}" class="${curTab === k ? 'on' : ''}">${esc(name)} (${(S[k] || []).length})</button>
   `).join('');
 
-  mount.innerHTML = `
-    <div class="phead">
-      <div><div class="kick">Системные справочники</div><h1>Справочники</h1></div>
-      <div class="sp"></div>
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <div class="view-switch" style="display:inline-flex;background:var(--line2);padding:3px;border-radius:10px;gap:2px">
-          <button id="btnViewTable" class="btn sm ${curView === 'table' ? 'pri' : 'ghost'}" title="Представление: Таблица" style="display:inline-flex;align-items:center;gap:4px">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M3 3h18v18H3zM3 9h18M3 15h18M9 3v18"/></svg>
-            Таблица
-          </button>
-          <button id="btnViewCards" class="btn sm ${curView === 'cards' ? 'pri' : 'ghost'}" title="Представление: Карточки" style="display:inline-flex;align-items:center;gap:4px">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
-            Карточки
-          </button>
-        </div>
-        <button class="btn pri" id="btnAddRef" style="font-weight:700;display:inline-flex;align-items:center;gap:4px">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Добавить элемент
+  const activeCount = (S[curTab] || []).length;
+
+  const headerHtml = renderUnifiedHeader(S, {
+    title: 'Справочники',
+    count: activeCount,
+    actions: `
+      <div class="view-switch" style="display:inline-flex;background:var(--line2);padding:2px;border-radius:8px;gap:2px">
+        <button id="btnViewTable" class="btn sm ${curView === 'table' ? 'pri' : 'ghost'}" title="Представление: Таблица" style="padding:2px 8px;font-size:12px">
+          Таблица
+        </button>
+        <button id="btnViewCards" class="btn sm ${curView === 'cards' ? 'pri' : 'ghost'}" title="Представление: Карточки" style="padding:2px 8px;font-size:12px">
+          Карточки
         </button>
       </div>
-    </div>
-    <div class="refs">
+      <button class="btn pri sm" id="btnAddRef" style="font-weight:700;display:inline-flex;align-items:center;gap:4px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        + Запись
+      </button>
+    `
+  });
+
+  mount.innerHTML = `
+    ${headerHtml}
+    <div class="refs page-content" style="padding-top:10px">
       <div class="tabs">${tabs}</div>
       <div id="refPanel"></div>
     </div>`;

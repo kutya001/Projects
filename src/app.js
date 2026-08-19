@@ -179,7 +179,6 @@ export async function initApp() {
     overlayEl.classList.toggle('open', isOpened);
   }
 
-  if (btnMobileMenu) btnMobileMenu.onclick = () => toggleMobileMenu();
   if (overlayEl) overlayEl.onclick = () => toggleMobileMenu(false);
 
   // Bind nav bar click listeners
@@ -190,14 +189,29 @@ export async function initApp() {
     };
   });
 
-  // Topbar search input
-  const topSearch = $('#topSearch');
-  if (topSearch) {
-    topSearch.oninput = e => {
+  // Global delegation for topbar search, clear button, and mobile menu button
+  document.addEventListener('click', e => {
+    const mobBtn = e.target.closest('#btnMobileMenu');
+    if (mobBtn) {
+      toggleMobileMenu();
+      return;
+    }
+    const clrBtn = e.target.closest('#btnTopSearchClear');
+    if (clrBtn) {
+      S.search = '';
+      const topSearch = document.querySelector('#topSearch');
+      if (topSearch) topSearch.value = '';
+      renderCurrentPage();
+      return;
+    }
+  });
+
+  document.addEventListener('input', e => {
+    if (e.target && e.target.id === 'topSearch') {
       S.search = e.target.value.trim();
       renderCurrentPage();
-    };
-  }
+    }
+  });
 
   // Router listener
   router.on('route:change', () => {

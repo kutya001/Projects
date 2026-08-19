@@ -453,16 +453,7 @@ export function openViewModal(S, ent, id, callbacks = {}, stack = []) {
   // Stage History Tab HTML (for Projects)
   let histHtml = '';
   if (cEnt === 'projects') {
-    const h = S.history.filter(x => x.projectId === r.id).sort((a, b) => a.ts < b.ts ? 1 : -1);
-    histHtml = `<div>
-      <div class="v-section-title">Журнал изменения этапов</div>
-      <table class="mini-t hist">${h.map(x => {
-        const stgName = (S.stages.find(s => s.id === x.stageId) || {}).name || 'Этап';
-        const delta = x.to - x.from;
-        const dStr = delta > 0 ? `<span class="delta-up">+${delta}%</span>` : `<span class="delta-dn">${delta}%</span>`;
-        return `<tr><td class="mono" style="color:var(--mut);width:150px">${fmtDT(x.ts)}</td><td><b>${esc(stgName)}</b>: ${x.from}% → ${x.to}% (${dStr})</td></tr>`;
-      }).join('') || '<tr><td style="color:var(--mut2);padding:12px;text-align:center">История пуста</td></tr>'}</table>
-    </div>`;
+    histHtml = `<div id="vStageHistWrapper"></div>`;
   }
 
   // Detailed Key-Value Grid
@@ -785,6 +776,210 @@ function renderViewNotes(container, S, r, cEnt, callbacks, onBadgeUpdate) {
   });
 }
 
+function renderProjectStageHistoryView(container, S, r) {
+  let period = 'month'; // 'day' | 'month' | 'quarter' | 'year'
+  let dateFrom = '';
+  let dateTo = '';
+
+  const reDraw = () => {
+    const histList = (S.stageHistory && S.stageHistory.length ? S.stageHistory : (S.history || [])).filter(x => x.projectId === r.id);
+    
+    // Apply date range filters if present
+    let filteredHist = histList;
+    if (dateFrom) filteredHist = filteredHist.filter(x => (x.ts || '').slice(0, 10) >= dateFrom);
+    if (dateTo) filteredHist = filteredHist.filter(x => (x.ts || '').slice(0, 10) <= dateTo);
+
+    const sortedHistDesc = [...filteredHist].sort((a, b) => (a.ts < b.ts ? 1 : -1));
+
+    // Helper to format date into period bucket
+    const getPeriodKey = (ts) => {
+      if (!ts) return '';
+      const d = new Date(ts);
+      if (isNaN(d.getTime())) return (ts || '').slice(0, 10);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      if (period === 'day') return `${day}.${m}`;
+      if (period === 'month') return `${m}.${String(y).slice(2)}`;
+      if (period === 'quarter') {
+        const q = Math.floor(d.getMonth() / 3) + 1;
+        return `Q${q}'${String(y).slice(2)}`;
+      }
+      return `${y}`;
+    };
+
+    // Mini charts for each stage
+    const stageChartsHtml = (S.stages || []).map(stage => {
+      const stageHist = filteredHist.filter(x => x.stageId === stage.id).sort((a, b) => (a.ts > b.ts ? 1 : -1));
+      const curVal = (r.stageProgress && r.stageProgress[stage.id] !== undefined) ? r.stageProgress[stage.id] : 0;
+      const stgColor = colorOf(stage) || '#0B7285';
+
+      // Group transitions into period points
+      const pointMap = new Map();
+      stageHist.forEach(h => {
+        const pk = getPeriodKey(h.ts);
+        pointMap.set(pk, h.to); // keep latest value in bucket
+      });
+
+      let points = Array.from(pointMap.entries()).map(([label, val]) => ({ label, val }));
+      if (points.length === 0) {
+        points = [
+          { label: 'Старт', val: 0 },
+          { label: 'Сейчас', val: curVal }
+        ];
+      } else if (points.length === 1) {
+        points.unshift({ label: 'Старт', val: 0 });
+      }
+
+      // Render SVG Sparkline
+      const W = 280, H = 80, padL = 30, padR = 16, padT = 16, padB = 22;
+      const plotW = W - padL - padR;
+      const plotH = H - padT - padB;
+      const stepX = points.length > 1 ? plotW / (points.length - 1) : plotW;
+
+      const coords = points.map((p, idx) => {
+        const x = Math.round(padL + idx * stepX);
+        const y = Math.round(padT + (1 - Math.max(0, Math.min(100, p.val)) / 100) * plotH);
+        return { ...p, x, y };
+      });
+
+      const polylinePoints = coords.map(c => `${c.x},${c.y}`).join(' ');
+      const areaPoints = `${coords[0].x},${padT + plotH} ` + polylinePoints + ` ${coords[coords.length - 1].x},${padT + plotH}`;
+
+      const svgChart = `
+        <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="overflow:visible">
+          <defs>
+            <linearGradient id="grad_stg_${stage.id}_${r.id}" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="${stgColor}" stop-opacity="0.25"/>
+              <stop offset="100%" stop-color="${stgColor}" stop-opacity="0.0"/>
+            </linearGradient>
+          </defs>
+          <!-- Guidelines -->
+          <line x1="${padL}" y1="${padT}" x2="${W - padR}" y2="${padT}" stroke="#E2E8F0" stroke-dasharray="2,2" stroke-width="1"/>
+          <line x1="${padL}" y1="${padT + plotH / 2}" x2="${W - padR}" y2="${padT + plotH / 2}" stroke="#E2E8F0" stroke-dasharray="2,2" stroke-width="1"/>
+          <line x1="${padL}" y1="${padT + plotH}" x2="${W - padR}" y2="${padT + plotH}" stroke="#CBD5E1" stroke-width="1"/>
+          
+          <text x="${padL - 4}" y="${padT + 3}" font-size="8" fill="#94A3B8" font-family="'JetBrains Mono',monospace" text-anchor="end">100%</text>
+          <text x="${padL - 4}" y="${padT + plotH + 3}" font-size="8" fill="#94A3B8" font-family="'JetBrains Mono',monospace" text-anchor="end">0%</text>
+
+          <!-- Area and Line -->
+          <polygon points="${areaPoints}" fill="url(#grad_stg_${stage.id}_${r.id})"/>
+          <polyline points="${polylinePoints}" fill="none" stroke="${stgColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+          <!-- Points and Labels -->
+          ${coords.map(c => `
+            <circle cx="${c.x}" cy="${c.y}" r="3.5" fill="#fff" stroke="${stgColor}" stroke-width="2"/>
+            <text x="${c.x}" y="${Math.max(10, c.y - 6)}" font-size="9" font-weight="700" fill="var(--ink)" font-family="'JetBrains Mono',monospace" text-anchor="middle">${c.val}%</text>
+            <text x="${c.x}" y="${H - 4}" font-size="8.5" fill="var(--mut)" font-family="'JetBrains Mono',monospace" text-anchor="middle">${esc(c.label)}</text>
+          `).join('')}
+        </svg>
+      `;
+
+      return `
+        <div class="stage-card" style="background:#fff;border:1px solid var(--line2);border-radius:10px;padding:12px;box-shadow:var(--sh);display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span class="dot" style="background:${stgColor};width:9px;height:9px;border-radius:50%"></span>
+              <span style="font-size:13px;font-weight:700;color:var(--ink)">${esc(stage.name)}</span>
+            </div>
+            <span class="chip mono" style="font-weight:800;font-size:12px;background:#EBF8FA;color:var(--acc)">${curVal}%</span>
+          </div>
+          <div style="margin-top:4px">
+            ${svgChart}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    container.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <!-- Controls Bar -->
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;background:#F8F9F4;padding:10px 14px;border-radius:10px;border:1px solid var(--line2)">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-size:12px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:0.04em">Разрез периода:</span>
+            <div class="seg" id="vhPeriodSeg" style="display:inline-flex;gap:2px">
+              <button data-p="day" class="${period === 'day' ? 'on' : ''}" style="padding:3px 8px;font-size:12px">День</button>
+              <button data-p="month" class="${period === 'month' ? 'on' : ''}" style="padding:3px 8px;font-size:12px">Месяц</button>
+              <button data-p="quarter" class="${period === 'quarter' ? 'on' : ''}" style="padding:3px 8px;font-size:12px">Квартал</button>
+              <button data-p="year" class="${period === 'year' ? 'on' : ''}" style="padding:3px 8px;font-size:12px">Год</button>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span style="font-size:12px;color:var(--mut)">С:</span>
+            <input type="date" id="vhDateFrom" value="${dateFrom}" style="padding:3px 6px;font-size:12px">
+            <span style="font-size:12px;color:var(--mut)">По:</span>
+            <input type="date" id="vhDateTo" value="${dateTo}" style="padding:3px 6px;font-size:12px">
+            ${(dateFrom || dateTo) ? `<button class="btn sm" id="vhClearDates" style="font-size:11px;padding:2px 6px">✕</button>` : ''}
+          </div>
+        </div>
+
+        <!-- Mini Charts Grid -->
+        <div style="font-size:13px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px">
+          <span>Динамика прогресса по этапам</span>
+          <span class="mono" style="font-weight:400;color:var(--mut);font-size:12px">(${S.stages.length} этапов)</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:12px">
+          ${stageChartsHtml}
+        </div>
+
+        <!-- Detailed History Log Table -->
+        <div style="margin-top:8px">
+          <div class="v-section-title">Хронологический журнал изменений (${sortedHistDesc.length})</div>
+          <div style="max-height:260px;overflow-y:auto;border:1px solid var(--line2);border-radius:8px">
+            <table class="mini-t hist" style="margin:0">
+              <thead>
+                <tr style="background:#F8F9F4">
+                  <td style="font-weight:700;width:150px">Дата / Время</td>
+                  <td style="font-weight:700">Этап</td>
+                  <td style="font-weight:700">Прогресс</td>
+                  <td style="font-weight:700;text-align:right">Дельта</td>
+                </tr>
+              </thead>
+              <tbody>
+                ${sortedHistDesc.map(x => {
+                  const stgObj = (S.stages || []).find(s => s.id === x.stageId);
+                  const stgName = stgObj?.name || 'Этап';
+                  const delta = (x.to || 0) - (x.from || 0);
+                  const deltaBadge = delta >= 0
+                    ? `<span class="chip" style="background:#E6FFFA;color:#234E52;font-weight:700">+${delta}%</span>`
+                    : `<span class="chip" style="background:#FED7D7;color:#9B2C2C;font-weight:700">${delta}%</span>`;
+                  return `
+                    <tr>
+                      <td class="mono" style="color:var(--mut);font-size:11.5px">${fmtDT(x.ts)}</td>
+                      <td>${stgObj ? chipHtml(stgName, colorOf(stgObj)) : esc(stgName)}</td>
+                      <td class="mono" style="font-size:12px"><b>${x.from}%</b> → <b>${x.to}%</b></td>
+                      <td style="text-align:right">${deltaBadge}</td>
+                    </tr>
+                  `;
+                }).join('') || '<tr><td colspan="4" style="color:var(--mut2);padding:14px;text-align:center">История изменений этапов пуста</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Event listeners
+    container.querySelectorAll('#vhPeriodSeg button').forEach(b => {
+      b.onclick = () => {
+        period = b.dataset.p;
+        reDraw();
+      };
+    });
+
+    const df = container.querySelector('#vhDateFrom');
+    if (df) df.onchange = () => { dateFrom = df.value; reDraw(); };
+
+    const dt = container.querySelector('#vhDateTo');
+    if (dt) dt.onchange = () => { dateTo = dt.value; reDraw(); };
+
+    const clr = container.querySelector('#vhClearDates');
+    if (clr) clr.onclick = () => { dateFrom = ''; dateTo = ''; reDraw(); };
+  };
+
+  reDraw();
+}
+
   const descHtml = r.desc ? `<div style="margin-bottom:14px">
     <div class="v-section-title">Описание</div>
     <div style="white-space:pre-wrap;background:#F8F9F4;padding:12px 14px;border-radius:8px;border:1px solid var(--line2);font-size:13px;line-height:1.5">${esc(r.desc)}</div>
@@ -910,17 +1105,7 @@ function renderViewNotes(container, S, r, cEnt, callbacks, onBadgeUpdate) {
         if (histEl) {
           histEl.classList.toggle('hidden', vt !== 'hist');
           if (vt === 'hist' && cEnt === 'projects') {
-            const histList = (S.stageHistory && S.stageHistory.length ? S.stageHistory : S.history) || [];
-            const h = histList.filter(x => x.projectId === r.id).sort((a, b) => a.ts < b.ts ? 1 : -1);
-            histEl.innerHTML = `<div>
-              <div class="v-section-title">Журнал изменения этапов</div>
-              <table class="mini-t hist">${h.map(x => {
-                const stgName = (S.stages.find(s => s.id === x.stageId) || {}).name || 'Этап';
-                const delta = x.to - x.from;
-                const dStr = delta > 0 ? `<span class="delta-up">+${delta}%</span>` : `<span class="delta-dn">${delta}%</span>`;
-                return `<tr><td class="mono" style="color:var(--mut);width:150px">${fmtDT(x.ts)}</td><td><b>${esc(stgName)}</b>: ${x.from}% → ${x.to}% (${dStr})</td></tr>`;
-              }).join('') || '<tr><td style="color:var(--mut2);padding:12px;text-align:center">История пуста</td></tr>'}</table>
-            </div>`;
+            renderProjectStageHistoryView(histEl, S, r);
           }
         }
       });
