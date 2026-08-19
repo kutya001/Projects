@@ -404,6 +404,22 @@ export function renderTimelineView(S, ent, mount, callbacks = {}) {
     rowMeta.push({ g, hidden: hidden.map(h => h.it), top: 0, h: rowH });
   });
 
+  const activeFiltersCount = countActiveViewFilters(tlFilters, S.search);
+  const filterBtnHtml = `
+    <button class="btn sm ${activeFiltersCount ? 'pri' : ''}" id="btnTlFilters" title="Фильтрация элементов" style="display:inline-flex;align-items:center;gap:4px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M3 5h18l-7 8v5l-4 2v-7L3 5z"/></svg>
+      Фильтры ${activeFiltersCount ? `(${activeFiltersCount})` : ''}
+    </button>
+  `;
+
+  const resetBtnHtml = activeFiltersCount > 0 ? `
+    <button class="btn sm" id="btnTlResetFilters" title="Сбросить все применённые фильтры и поиск" style="display:inline-flex;align-items:center;gap:6px;background:#FFF5F5;border-color:#FEB2B2;color:#C53030;font-weight:700;padding:3px 10px;border-radius:6px;cursor:pointer">
+      <svg viewBox="0 0 24 24" fill="currentColor" style="width:12px;height:12px"><path d="M3 5h18l-7 8v5l-4 2v-7L3 5z"/></svg>
+      Применено фильтров: ${activeFiltersCount}
+      <span style="font-weight:800;margin-left:2px;font-size:12px">✕ Сбросить</span>
+    </button>
+  ` : '';
+
   const todayX = Math.round(diffDays(toISO(ws), today) * ppd);
   mount.innerHTML = `
     <div class="panel toolbar" style="margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
