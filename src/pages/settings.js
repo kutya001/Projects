@@ -20,6 +20,18 @@ let auditLogFilters = {
 export function renderSettingsPage(S, mount, callbacks = {}) {
   const mods = S.prefs.modules || { projects: true, tasks: false, changes: false };
 
+  let bkClass = 'err';
+  let bkText = 'Резервная копия отсутствует';
+  if (S.lastExport) {
+    if (S.lastSaved && S.lastSaved > S.lastExport) {
+      bkClass = 'warn';
+      bkText = 'После последнего экспорта есть изменения';
+    } else {
+      bkClass = 'ok';
+      bkText = 'Резервная копия актуальна';
+    }
+  }
+
   const headerHtml = renderUnifiedHeader(S, {
     title: 'Настройки',
     count: null

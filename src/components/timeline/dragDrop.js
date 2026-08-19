@@ -217,7 +217,7 @@ export function setupTimelineDragDrop(S, ent, mount, reRender, rowMeta, groupBy,
     try {
       await db[ent].put(r);
       await refreshAll(S);
-      await afterChange(S, callbacks.autoSave);
+      await afterChange(S);
       toast(`«${r.name}»: ${fmtD(r.start)} → ${fmtD(r.end)}`, 'ok');
     } catch (err) {
       setDbBeacon('error', '🔴 Ошибка базы данных');

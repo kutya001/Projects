@@ -958,7 +958,7 @@ export function renderKanbanView(S, ent, mount, callbacks = {}) {
         S.prefs.kanbanCardOrder[targetColKey] = colCards;
         await savePrefs(S);
         await refreshAll(S);
-        await afterChange(S, callbacks.autoSave);
+        await afterChange(S);
         toast('Порядок карточек обновлен', 'ok');
         reRender();
       }
@@ -1090,7 +1090,7 @@ export function renderKanbanView(S, ent, mount, callbacks = {}) {
 
         await savePrefs(S);
         await refreshAll(S);
-        await afterChange(S, callbacks.autoSave);
+        await afterChange(S);
         toast(`«${r.name}» перемещен(а)`, 'ok');
         reRender();
       } catch (err) {
