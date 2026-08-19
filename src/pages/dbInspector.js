@@ -119,13 +119,13 @@ export async function renderDbInspectorPage(S, mount, callbacks = {}) {
   mount.innerHTML = `
     ${headerHtml}
     <div class="page-content" style="padding-top:10px">
-      <div class="db-inspector-container" style="display:flex;gap:16px;align-items:flex-start;min-height:calc(100vh - 120px)">
+      <div class="db-inspector-container">
       <!-- Sidebar Table List -->
-      <div class="db-sidebar" style="width:260px;min-width:260px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;box-shadow:var(--sh)">
+      <div class="db-sidebar">
         <div style="font-size:11px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;padding:0 4px">
           Таблицы базы данных (${tables.length})
         </div>
-        <div class="db-table-nav" style="display:flex;flex-direction:column;gap:3px;max-height:calc(100vh - 240px);overflow-y:auto">
+        <div class="db-table-nav">
           ${tables.map(t => {
             const count = (S[t.name] || []).length;
             const isAct = t.name === activeTable;
@@ -759,7 +759,7 @@ export function renderRawDbTable(S, tbl, mount, callbacks = {}) {
       </div>
 
       <!-- Raw Table Container -->
-      <div class="tbl-wrap" style="max-height:calc(100vh - 300px);overflow:auto">
+      <div class="tbl-wrap">
         <table class="tbl" style="width:100%;border-collapse:collapse">
           <thead>
             <tr>

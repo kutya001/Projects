@@ -39,7 +39,7 @@ export function renderSettingsPage(S, mount, callbacks = {}) {
 
   mount.innerHTML = `
     ${headerHtml}
-    <div class="page-content" style="padding-top:10px">
+    <div class="page-content scrollable" style="padding-top:10px">
       <div class="setgrid" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:16px">
 
       <!-- Author and Platform Info Card -->

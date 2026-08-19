@@ -649,8 +649,8 @@ export function renderKanbanView(S, ent, mount, callbacks = {}) {
     </button>
   ` : '';
 
-  mount.innerHTML = `<div class="panel" style="padding:14px;background:transparent;border:none;box-shadow:none">
-    <div class="toolbar panel" style="margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+  mount.innerHTML = `<div class="kanban-view-panel">
+    <div class="toolbar panel" style="margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:none">
       <span style="font-size:12px;color:var(--mut);font-weight:700;letter-spacing:.06em;text-transform:uppercase">Группировка:</span>
       <div class="seg kb-tabs" style="display:inline-flex;gap:3px;align-items:center;flex-wrap:wrap">
         ${stdOpts.map(o => `

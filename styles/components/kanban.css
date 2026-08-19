@@ -1,10 +1,22 @@
+.kanban-view-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
 .kb {
   display: flex;
-  gap: 14px;
+  gap: 12px;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 4px 2px 16px;
-  height: calc(100vh - 268px);
+  padding: 0 0 2px;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  max-height: none;
   align-items: stretch;
 }
 
@@ -214,9 +226,12 @@
 
 @media (max-width: 768px) {
   .kb {
-    height: calc(100vh - 210px);
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+    max-height: none;
     gap: 10px;
-    padding: 4px 0 12px;
+    padding: 2px 0 6px;
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
   }

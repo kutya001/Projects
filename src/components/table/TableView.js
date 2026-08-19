@@ -307,7 +307,7 @@ export function renderTableView(S, ent, mount, callbacks = {}) {
 
   mount.innerHTML = `
     ${bulkBarHtml}
-    <div class="panel">
+    <div class="panel table-panel">
       <div class="toolbar">
         <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">
           <span style="font-size:12.5px;color:var(--mut)">Показано <b class="mono" style="color:var(--ink)">${shown.length}</b> из <b class="mono" style="color:var(--ink)">${rows.length}</b></span>

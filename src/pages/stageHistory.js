@@ -49,7 +49,7 @@ export function renderStageHistoryPage(S, mount, callbacks = {}) {
     <div class="page-content">
 
     <!-- Summary KPI Cards -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:12px;margin-bottom:16px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:12px;margin-bottom:10px;flex:none">
       <div style="background:#fff;padding:12px 14px;border-radius:10px;border:1px solid var(--line);box-shadow:var(--sh)">
         <div style="font-size:11px;color:var(--mut);text-transform:uppercase;font-weight:700;letter-spacing:0.04em">Всего записей</div>
         <div style="font-size:20px;font-weight:800;color:var(--ink);margin-top:2px" class="mono">${hist.length}</div>
@@ -73,7 +73,7 @@ export function renderStageHistoryPage(S, mount, callbacks = {}) {
     </div>
 
     <!-- Table Container -->
-    <div id="stageHistTableWrap"></div>
+    <div id="stageHistTableWrap" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden"></div>
   `;
 
   const tableWrapEl = mount.querySelector('#stageHistTableWrap');

@@ -422,41 +422,43 @@ export function renderTimelineView(S, ent, mount, callbacks = {}) {
 
   const todayX = Math.round(diffDays(toISO(ws), today) * ppd);
   mount.innerHTML = `
-    <div class="panel toolbar" style="margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      <span style="font-size:12px;color:var(--mut);font-weight:700;letter-spacing:.06em;text-transform:uppercase">Масштаб:</span>
-      <div class="seg" id="tlMode">
-        ${MODES.map(m => `<button data-m="${m[0]}" class="${mode === m[0] ? 'on' : ''}">${m[1]}</button>`).join('')}
-      </div>
-      <div class="seg" id="tlGroup">
-        <button data-g="status" class="${groupBy === 'status' ? 'on' : ''}">По статусам</button>
-        ${ent === 'projects' ? `<button data-g="stage" class="${groupBy === 'stage' ? 'on' : ''}">По этапам</button>` : ''}
-        <button data-g="dev" class="${groupBy === 'dev' ? 'on' : ''}">По разработчикам</button>
-        <button data-g="agent" class="${groupBy === 'agent' ? 'on' : ''}">По агентам</button>
-        <button data-g="priority" class="${groupBy === 'priority' ? 'on' : ''}">По приоритетам</button>
-      </div>
-      <select id="tlColor" style="width:auto;padding:7px 10px">
-        <option value="status" ${colorBy === 'status' ? 'selected' : ''}>Цвет: Статус</option>
-        <option value="priority" ${colorBy === 'priority' ? 'selected' : ''}>Цвет: Приоритет</option>
-        <option value="dev" ${colorBy === 'dev' ? 'selected' : ''}>Цвет: Разработчик</option>
-        <option value="agent" ${colorBy === 'agent' ? 'selected' : ''}>Цвет: Агент</option>
-        ${ent === 'projects' ? `<option value="stage" ${colorBy === 'stage' ? 'selected' : ''}>Цвет: Этап</option>` : ''}
-      </select>
-      <button class="btn sm" data-nav="-1">◀</button>
-      <button class="btn sm" data-today>Сегодня</button>
-      <button class="btn sm" data-nav="1">▶</button>
-      <button class="btn sm" data-cards>⚙ Карточки</button>
-      ${filterBtnHtml}
-      ${resetBtnHtml}
-      <span class="hint">Перетаскивайте полосы по дате и между строками · за края — растянуть · клик — карточка</span>
-    </div>
-    <div class="tl-scroll" id="tlScrollEl">
-      <div style="min-width:${LEFTW + totalW}px;position:relative">
-        <div class="tl-headrow">
-          <div class="tl-corner" style="width:${LEFTW}px;min-width:${LEFTW}px;flex:none">${groupBy === 'dev' ? 'Разработчик (гл.)' : groupBy === 'agent' ? 'Агент (гл.)' : groupBy === 'priority' ? 'Приоритет' : groupBy === 'stage' ? 'Этап' : 'Статус'}</div>
-          <div class="tl-hc" style="width:${totalW}px;flex:none">${segRow(topSegs)}${segRow(botSegs, true)}</div>
+    <div class="timeline-view-panel">
+      <div class="panel toolbar" style="margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:none">
+        <span style="font-size:12px;color:var(--mut);font-weight:700;letter-spacing:.06em;text-transform:uppercase">Масштаб:</span>
+        <div class="seg" id="tlMode">
+          ${MODES.map(m => `<button data-m="${m[0]}" class="${mode === m[0] ? 'on' : ''}">${m[1]}</button>`).join('')}
         </div>
-        <div id="tlBody" style="position:relative">${rowsHtml}
-          ${todayX >= 0 && todayX <= totalW ? `<div class="tl-today" style="left:${LEFTW + todayX}px"></div>` : ''}
+        <div class="seg" id="tlGroup">
+          <button data-g="status" class="${groupBy === 'status' ? 'on' : ''}">По статусам</button>
+          ${ent === 'projects' ? `<button data-g="stage" class="${groupBy === 'stage' ? 'on' : ''}">По этапам</button>` : ''}
+          <button data-g="dev" class="${groupBy === 'dev' ? 'on' : ''}">По разработчикам</button>
+          <button data-g="agent" class="${groupBy === 'agent' ? 'on' : ''}">По агентам</button>
+          <button data-g="priority" class="${groupBy === 'priority' ? 'on' : ''}">По приоритетам</button>
+        </div>
+        <select id="tlColor" style="width:auto;padding:7px 10px">
+          <option value="status" ${colorBy === 'status' ? 'selected' : ''}>Цвет: Статус</option>
+          <option value="priority" ${colorBy === 'priority' ? 'selected' : ''}>Цвет: Приоритет</option>
+          <option value="dev" ${colorBy === 'dev' ? 'selected' : ''}>Цвет: Разработчик</option>
+          <option value="agent" ${colorBy === 'agent' ? 'selected' : ''}>Цвет: Агент</option>
+          ${ent === 'projects' ? `<option value="stage" ${colorBy === 'stage' ? 'selected' : ''}>Цвет: Этап</option>` : ''}
+        </select>
+        <button class="btn sm" data-nav="-1">◀</button>
+        <button class="btn sm" data-today>Сегодня</button>
+        <button class="btn sm" data-nav="1">▶</button>
+        <button class="btn sm" data-cards>⚙ Карточки</button>
+        ${filterBtnHtml}
+        ${resetBtnHtml}
+        <span class="hint">Перетаскивайте полосы по дате и между строками · за края — растянуть · клик — карточка</span>
+      </div>
+      <div class="tl-scroll" id="tlScrollEl">
+        <div style="min-width:${LEFTW + totalW}px;position:relative">
+          <div class="tl-headrow">
+            <div class="tl-corner" style="width:${LEFTW}px;min-width:${LEFTW}px;flex:none">${groupBy === 'dev' ? 'Разработчик (гл.)' : groupBy === 'agent' ? 'Агент (гл.)' : groupBy === 'priority' ? 'Приоритет' : groupBy === 'stage' ? 'Этап' : 'Статус'}</div>
+            <div class="tl-hc" style="width:${totalW}px;flex:none">${segRow(topSegs)}${segRow(botSegs, true)}</div>
+          </div>
+          <div id="tlBody" style="position:relative">${rowsHtml}
+            ${todayX >= 0 && todayX <= totalW ? `<div class="tl-today" style="left:${LEFTW + todayX}px"></div>` : ''}
+          </div>
         </div>
       </div>
     </div>`;

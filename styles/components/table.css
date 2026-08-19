@@ -5,13 +5,23 @@
   box-shadow: var(--sh);
 }
 
+.table-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
 .toolbar {
   display: flex;
   gap: 10px;
   align-items: center;
   flex-wrap: wrap;
-  padding: 12px 14px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--line2);
+  flex: none;
 }
 
 .toolbar .sp {
@@ -20,7 +30,10 @@
 
 .tbl-wrap {
   overflow: auto;
-  max-height: calc(100vh - 262px);
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  max-height: none;
   border-radius: 0 0 10px 10px;
 }
 
@@ -346,7 +359,10 @@ table.tbl {
     display: none;
   }
   .tbl-wrap {
-    max-height: calc(100vh - 210px);
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+    max-height: none;
     -webkit-overflow-scrolling: touch;
   }
   table.tbl {

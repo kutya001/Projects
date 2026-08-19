@@ -1,9 +1,19 @@
+.timeline-view-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
 .tl-tools {
   display: flex;
   gap: 10px;
   align-items: center;
   flex-wrap: wrap;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
+  flex: none;
 }
 
 .tl-tools .hint {
@@ -14,7 +24,10 @@
 
 .tl-scroll {
   overflow: auto;
-  max-height: calc(100vh - 292px);
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  max-height: none;
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -390,7 +403,10 @@
     font-size: 11px;
   }
   .tl-scroll {
-    max-height: calc(100vh - 240px);
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+    max-height: none;
     -webkit-overflow-scrolling: touch;
   }
   .tl-left {

@@ -1,9 +1,28 @@
 /* Module: Refs */
+.refs {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
 .refs .tabs {
   display: flex;
   gap: 6px;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
   flex-wrap: wrap;
+  flex: none;
+}
+
+#refPanel {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .refs .tabs button {
@@ -37,6 +56,10 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 14px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  padding-bottom: 20px;
 }
 
 .ref-card {

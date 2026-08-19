@@ -381,7 +381,7 @@ export function renderReportsPage(S, mount, callbacks = {}) {
 
   mount.innerHTML = `
     ${headerHtml}
-    <div class="page-content" style="padding-top:10px">
+    <div class="page-content scrollable" style="padding-top:10px">
       <div class="reports-container ${isEditLayoutMode ? 'editing-dashboard' : ''}">
       ${isEditLayoutMode ? `
       <div class="reports-edit-toolbar">
